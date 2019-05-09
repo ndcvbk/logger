@@ -2,7 +2,7 @@ package logger
 
 // ILogger ...
 type ILogger interface {
-    Init()
+    GetLogger(loglevelAsString string)
     Info(interfaceName string, functionName string, message string)
     Trace(interfaceName string, functionName string, message string)
     Debug(interfaceName string, functionName string, message string)
