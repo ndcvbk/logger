@@ -2,8 +2,6 @@ package logger
 
 // ILogger ...
 type ILogger interface {
-    // Create new instance of Logger
-    New(loglevelAsString string)
     // Log with loglevel info
     Info(interfaceName string, functionName string, message string)
     // Log with loglevel trace
