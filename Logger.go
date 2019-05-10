@@ -4,6 +4,7 @@ import (
     "fmt"
     "github.com/logmatic/logmatic-go"
     "github.com/sirupsen/logrus"
+    "runtime"
     "sync"
 )
 
@@ -11,6 +12,7 @@ import (
 type Logger struct {
     logEntry *logrus.Entry
     singleton *Logger
+    logLevel logrus.Level
 }
 
 const (
@@ -18,8 +20,7 @@ const (
 
     cantSetLogLevel =   "Cannot set log level, will fall back to default level %s"
 
-    interfaze =         "interface"
-    function =          "function"
+    frame           =   "frame"
 )
 
 var (
@@ -45,36 +46,82 @@ func New(logLevelAsString string) *Logger {
 }
 
 // Info ...
-func (l *Logger) Info(interfaceName string, functionName string, message string) {
-    l.createEntry(interfaceName, functionName).Info(message)
+func (l *Logger) Info(message string) {
+    if(l.isLogLevelEnabled(logrus.InfoLevel)) {
+        l.createEntry().Info(message)
+    }
 }
 
 // Trace ...
-func (l *Logger) Trace(interfaceName string, functionName string, message string) {
-    l.createEntry(interfaceName, functionName).Trace(message)
+func (l *Logger) Trace(message string) {
+    if(l.isLogLevelEnabled(logrus.TraceLevel)) {
+        l.createEntry().Trace(message)
+    }
 }
 
 // Debug ...
-func (l *Logger) Debug(interfaceName string, functionName string, message string) {
-    l.createEntry(interfaceName, functionName).Debug(message)
+func (l *Logger) Debug(message string) {
+    if(l.isLogLevelEnabled(logrus.DebugLevel)) {
+        l.createEntry().Debug(message)
+    }
 }
 
 // Warn ...
-func (l *Logger) Warn(interfaceName string, functionName string, message string) {
-    l.createEntry(interfaceName, functionName).Warn(message)
+func (l *Logger) Warn(message string) {
+    if(l.isLogLevelEnabled(logrus.WarnLevel)) {
+        l.createEntry().Warn(message)
+    }
 }
 
 // Error ...
-func (l *Logger) Error(interfaceName string, functionName string, message string) {
-    l.createEntry(interfaceName, functionName).Error(message)
+func (l *Logger) Error(message string) {
+    if(l.isLogLevelEnabled(logrus.ErrorLevel)) {
+        l.createEntry().Error(message)
+    }
 }
 
 // Fatal ...
-func (l *Logger) Fatal(interfaceName string, functionName string, message string) {
-    l.createEntry(interfaceName, functionName).Fatal(message)
+func (l *Logger) Fatal(message string) {
+    if(l.isLogLevelEnabled(logrus.FatalLevel)) {
+        l.createEntry().Fatal(message)
+    }
 }
 
 // Generic
-func (l *Logger) createEntry(interfaceName string, functionName string) *logrus.Entry {
-    return l.logEntry.WithFields(logrus.Fields{interfaze: interfaceName, function: functionName})
+func (l *Logger) createEntry() *logrus.Entry {
+    frameInfo := getFrameInfo()
+    return l.logEntry.WithFields(logrus.Fields{frame: frameInfo})
+}
+
+// Check if logging at this level is enabled.
+func (l *Logger) isLogLevelEnabled(level logrus.Level) bool {
+    shouldLogAtLevel := logrus.AllLevels[l.logLevel]
+    entryLevel := logrus.AllLevels[level]
+    return shouldLogAtLevel >= entryLevel
+}
+
+// Function to retrieve information about the log-calling function
+func getFrameInfo() string {
+    // We need the frame at index 3, since we never want runtime.Callers, getFrame, createEntry and Info|Debug|Trace|etc
+    targetFrameIndex := 4
+
+    programCounters := make([]uintptr, targetFrameIndex + 1)
+    n := runtime.Callers(0, programCounters)
+
+    frame := runtime.Frame{Function: "unknown"}
+    if n > 0 {
+        frames := runtime.CallersFrames(programCounters[:n])
+        for more, frameIndex := true, 0; more && frameIndex <= targetFrameIndex; frameIndex++ {
+            var frameCandidate runtime.Frame
+            frameCandidate, more = frames.Next()
+            if frameIndex == targetFrameIndex {
+                frame = frameCandidate
+            }
+        }
+    }
+
+    message := fmt.Sprintf("%s, %s #%v", frame.Func.Name(), frame.File, frame.Line)
+
+    return message
+
 }
