@@ -26,22 +26,22 @@ var (
     createLoggerOnce sync.Once
 )
 
-// Init ...
-func (l *Logger) GetLogger(logLevelAsString string) *Logger {
-    if l.singleton == nil {
-        createLoggerOnce.Do(func() {
-            logger := logrus.New()
-            logger.SetFormatter(&logmatic.JSONFormatter{})
-            logLevel, err := logrus.ParseLevel(logLevelAsString)
-            if err != nil {
-                logger.Warn(fmt.Printf(cantSetLogLevel, defaultLogLevel))
-                logLevel = defaultLogLevel
-            }
-            logger.SetLevel(logLevel)
-            l.singleton = &Logger{ logEntry: logrus.NewEntry(logger)}
-        })
-    }
-    return l.singleton
+// Constructor
+func New(logLevelAsString string) *Logger {
+    this := Logger{}
+
+    createLoggerOnce.Do(func() {
+        logger := logrus.New()
+        logger.SetFormatter(&logmatic.JSONFormatter{})
+        logLevel, err := logrus.ParseLevel(logLevelAsString)
+        if err != nil {
+            logger.Warn(fmt.Printf(cantSetLogLevel, defaultLogLevel))
+            logLevel = defaultLogLevel
+        }
+        logger.SetLevel(logLevel)
+        this.singleton = &Logger{ logEntry: logrus.NewEntry(logger)}
+    })
+    return this.singleton
 }
 
 // Info ...
