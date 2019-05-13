@@ -46,48 +46,54 @@ func New(logLevelAsString string) *Logger {
 }
 
 // Info ...
-func (l *Logger) Info(message string) {
-    if(l.isLogLevelEnabled(logrus.InfoLevel)) {
+func (l *Logger) Info(message string, variadic ...interface{}) {
+    if l.isLogLevelEnabled(logrus.InfoLevel) {
+        message = formatMessage(message, variadic)
         l.createEntry().Info(message)
     }
 }
 
 // Trace ...
-func (l *Logger) Trace(message string) {
-    if(l.isLogLevelEnabled(logrus.TraceLevel)) {
+func (l *Logger) Trace(message string, variadic ...interface{}) {
+    if l.isLogLevelEnabled(logrus.TraceLevel) {
+        message = formatMessage(message, variadic)
         l.createEntry().Trace(message)
     }
 }
 
 // Debug ...
-func (l *Logger) Debug(message string) {
-    if(l.isLogLevelEnabled(logrus.DebugLevel)) {
+func (l *Logger) Debug(message string, variadic ...interface{}) {
+    if l.isLogLevelEnabled(logrus.DebugLevel) {
+        message = formatMessage(message, variadic)
         l.createEntry().Debug(message)
     }
 }
 
 // Warn ...
-func (l *Logger) Warn(message string) {
-    if(l.isLogLevelEnabled(logrus.WarnLevel)) {
+func (l *Logger) Warn(message string, variadic ...interface{}) {
+    if l.isLogLevelEnabled(logrus.WarnLevel) {
+        message = formatMessage(message, variadic)
         l.createEntry().Warn(message)
     }
 }
 
 // Error ...
-func (l *Logger) Error(message string) {
-    if(l.isLogLevelEnabled(logrus.ErrorLevel)) {
+func (l *Logger) Error(message string, variadic ...interface{}) {
+    if l.isLogLevelEnabled(logrus.ErrorLevel) {
+        message = formatMessage(message, variadic)
         l.createEntry().Error(message)
     }
 }
 
 // Fatal ...
-func (l *Logger) Fatal(message string) {
-    if(l.isLogLevelEnabled(logrus.FatalLevel)) {
+func (l *Logger) Fatal(message string, variadic ...interface{}) {
+    if l.isLogLevelEnabled(logrus.FatalLevel) {
+        message = formatMessage(message, variadic)
         l.createEntry().Fatal(message)
     }
 }
 
-// Generic
+// Generic helper function
 func (l *Logger) createEntry() *logrus.Entry {
     frameInfo := getFrameInfo()
     return l.logEntry.WithFields(logrus.Fields{frame: frameInfo})
@@ -123,5 +129,13 @@ func getFrameInfo() string {
     message := fmt.Sprintf("%s, %s #%v", frame.Func.Name(), frame.File, frame.Line)
 
     return message
+}
 
+// Helps formatting the message if multiple vars have been passed
+func formatMessage(message string, variadic ...interface{}) string {
+    if len(variadic) > 0 {
+        return fmt.Sprintf(message, variadic...)
+    } else {
+        return message
+    }
 }
