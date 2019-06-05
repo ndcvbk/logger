@@ -38,7 +38,7 @@ func GetInstance(logLevelAsString string) *Logger {
             logLevel, err := logrus.ParseLevel(logLevelAsString)
 
             if err != nil {
-                logger.Warn(cantSetLogLevel, defaultLogLevel)
+                logger.Warnf(cantSetLogLevel, defaultLogLevel)
                 logLevel = defaultLogLevel
             }
 
