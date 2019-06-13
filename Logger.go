@@ -8,9 +8,8 @@ import (
     "sync"
 )
 
-type Logger struct {
-    logEntry *logrus.Entry
-    logLevel logrus.Level
+type logger struct {
+    *logrus.Logger
 }
 
 const (
@@ -22,91 +21,81 @@ const (
 var (
     createLoggerOnce sync.Once
     defaultLogLevel  = logrus.WarnLevel
-    instance         *Logger
+    instance         *logger
 )
 
 // Constructor
-func GetInstance(logLevelAsString string) ILogger {
+func GetInstance(logLevelString string) ILogger {
     if instance == nil {
         createLoggerOnce.Do(func() {
-            instance = &Logger{}
+            instance = &logger{}
 
-            logger := logrus.New()
-            logger.SetFormatter(&logmatic.JSONFormatter{})
-            logLevel, err := logrus.ParseLevel(logLevelAsString)
+            logrusLogger := logrus.New()
+            logrusLogger.SetFormatter(&logmatic.JSONFormatter{})
 
+            logLevel, err := logrus.ParseLevel(logLevelString)
             if err != nil {
-                logger.Warnf(cantSetLogLevel, defaultLogLevel)
+                logrusLogger.Warnf(cantSetLogLevel, defaultLogLevel)
                 logLevel = defaultLogLevel
             }
 
-            logger.SetLevel(logLevel)
-            entry := logrus.NewEntry(logger)
-            entry.Level = logLevel
-
-            instance.logLevel = logLevel
-            instance.logEntry = entry
+            logrusLogger.SetLevel(logLevel)
+            instance.Logger = logrusLogger
         })
     } else {
-        instance.Trace(instanceAlreadyExists, logLevelAsString, instance.logLevel)
+        instance.Trace(instanceAlreadyExists, logLevelString, logrus.Level(instance.GetLevel()))
     }
 
     return instance
 }
 
-func (l *Logger) Info(message string, args ...interface{}) {
-    if l.isLogLevelEnabled(logrus.InfoLevel) {
-        message = formatMessage(message, args...)
-        l.createEntry().Info(message)
+func (l *logger) Info(message string, args ...interface{}) {
+    if l.IsLevelEnabled(InfoLevel) {
+        l.createEntry().Infof(message, args...)
     }
 }
 
-func (l *Logger) Trace(message string, args ...interface{}) {
-    if l.isLogLevelEnabled(logrus.TraceLevel) {
-        message = formatMessage(message, args...)
-        l.createEntry().Trace(message)
+func (l *logger) Trace(message string, args ...interface{}) {
+    if l.IsLevelEnabled(TraceLevel) {
+        l.createEntry().Tracef(message, args...)
     }
 }
 
-func (l *Logger) Debug(message string, args ...interface{}) {
-    if l.isLogLevelEnabled(logrus.DebugLevel) {
-        message = formatMessage(message, args...)
-        l.createEntry().Debug(message)
+func (l *logger) Debug(message string, args ...interface{}) {
+    if l.IsLevelEnabled(DebugLevel) {
+        l.createEntry().Debugf(message, args...)
     }
 }
 
-func (l *Logger) Warn(message string, args ...interface{}) {
-    if l.isLogLevelEnabled(logrus.WarnLevel) {
-        message = formatMessage(message, args...)
-        l.createEntry().Warn(message)
+func (l *logger) Warn(message string, args ...interface{}) {
+    if l.IsLevelEnabled(WarnLevel) {
+        l.createEntry().Warnf(message, args...)
     }
 }
 
-func (l *Logger) Error(message string, args ...interface{}) {
-    if l.isLogLevelEnabled(logrus.ErrorLevel) {
-        message = formatMessage(message, args...)
-        l.createEntry().Error(message)
+func (l *logger) Error(message string, args ...interface{}) {
+    if l.IsLevelEnabled(ErrorLevel) {
+        l.createEntry().Errorf(message, args...)
     }
 }
 
-func (l *Logger) Fatal(message string, args ...interface{}) {
-    if l.isLogLevelEnabled(logrus.FatalLevel) {
-        message = formatMessage(message, args...)
-        l.createEntry().Fatal(message)
+func (l *logger) Fatal(message string, args ...interface{}) {
+    if l.IsLevelEnabled(FatalLevel) {
+        l.createEntry().Fatalf(message, args...)
     }
+}
+
+func (l *logger) GetLevel() Level {
+    return Level(l.Logger.GetLevel())
+}
+
+func (l *logger) IsLevelEnabled(level Level) bool {
+    return l.Logger.IsLevelEnabled(logrus.Level(level))
 }
 
 // Generic helper function
-func (l *Logger) createEntry() *logrus.Entry {
-    frameInfo := getFrameInfo()
-    return l.logEntry.WithFields(logrus.Fields{frame: frameInfo})
-}
-
-// Check if logging at this level is enabled.
-func (l *Logger) isLogLevelEnabled(level logrus.Level) bool {
-    shouldLogAtLevel := logrus.AllLevels[l.logLevel]
-    entryLevel := logrus.AllLevels[level]
-    return shouldLogAtLevel >= entryLevel
+func (l *logger) createEntry() *logrus.Entry {
+    return logrus.NewEntry(l.Logger).WithFields(logrus.Fields{frame: getFrameInfo()})
 }
 
 // Function to retrieve information about the log-calling function
@@ -132,13 +121,4 @@ func getFrameInfo() string {
     message := fmt.Sprintf("%s, %s #%v", frame.Func.Name(), frame.File, frame.Line)
 
     return message
-}
-
-// Helps formatting the message if multiple vars have been passed
-func formatMessage(message string, variadic ...interface{}) string {
-    if variadic != nil && len(variadic) > 0 {
-        return fmt.Sprintf(message, variadic...)
-    } else {
-        return message
-    }
 }
