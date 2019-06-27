@@ -125,13 +125,17 @@ func parseArgs(args ...interface{}) []interface{} {
 
         if isPointer(reflectValue) && reflectValue.IsNil() {
             switch value.(type) {
-            case *string:
-              args[key] = "nil"
+            case *int8, *uint8, *int16, *uint16, *int32, *uint32, *int64, *uint64, *int, *uint, *uintptr, *float32, *float64, *complex64, *complex128:
+                args[key] = 0
             default:
-              args[key] = 0
+                args[key] = "nil"
             }
         }
+
+        args[key] = actualValue(args[key])
+
     }
+
     return args
 }
 
@@ -140,3 +144,63 @@ func isPointer(value reflect.Value) bool {
     return value.Kind() == reflect.Ptr
 }
 
+// actualValue returns the actual value, no pointers
+func actualValue(value interface{}) interface{} {
+    if isPointer(reflect.ValueOf(value)) {
+        switch value.(type) {
+        case *string:
+            text := value.(*string)
+            return *text
+        case *int8:
+            number := value.(*int8)
+            return *number
+        case *uint8:
+            number := value.(*uint8)
+            return *number
+        case *int16:
+            number := value.(*int16)
+            return *number
+        case *uint16:
+            number := value.(*uint16)
+            return *number
+        case *int32:
+            number := value.(*int32)
+            return *number
+        case *uint32:
+            number := value.(*uint32)
+            return *number
+        case *int64:
+            number := value.(*int64)
+            return *number
+        case *uint64:
+            number := value.(*uint64)
+            return *number
+        case *int:
+            number := value.(*int)
+            return *number
+        case *uint:
+            number := value.(*uint)
+            return *number
+        case *uintptr:
+            number := value.(*uintptr)
+            return *number
+        case *float32:
+            number := value.(*float32)
+            return *number
+        case *float64:
+            number := value.(*float64)
+            return *number
+        case *complex64:
+            number := value.(*complex64)
+            return *number
+        case *complex128:
+            number := value.(*complex128)
+            return *number
+        case *bool:
+           boolean := value.(*bool)
+           return *boolean
+        }
+    }
+
+    return value
+}
