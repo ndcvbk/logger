@@ -1,8 +1,8 @@
 package logger
 
 import (
+	"github.com/ndcvbk/logger/formatter"
     "fmt"
-    "github.com/logmatic/logmatic-go"
     "github.com/sirupsen/logrus"
     "reflect"
     "runtime"
@@ -26,7 +26,7 @@ func GetInstance(logLevelString string) ILogger {
             instance = &logger{}
 
             logrusLogger := logrus.New()
-            logrusLogger.SetFormatter(&logmatic.JSONFormatter{})
+            logrusLogger.SetFormatter(&formatter.Formatter{})
 
             logLevel, err := logrus.ParseLevel(logLevelString)
             if err != nil {
