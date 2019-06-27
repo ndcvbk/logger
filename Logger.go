@@ -4,6 +4,7 @@ import (
     "fmt"
     "github.com/logmatic/logmatic-go"
     "github.com/sirupsen/logrus"
+    "reflect"
     "runtime"
     "sync"
 )
@@ -11,12 +12,6 @@ import (
 type logger struct {
     *logrus.Logger
 }
-
-const (
-    cantSetLogLevel       = "Cannot set log level, will fall back to default level %s"
-    instanceAlreadyExists = "The instance already exists. Will ignore passed log level [%s]. Returning logger instance with logLevel [%s]."
-    frame                 = "frame"
-)
 
 var (
     createLoggerOnce sync.Once
@@ -35,7 +30,7 @@ func GetInstance(logLevelString string) ILogger {
 
             logLevel, err := logrus.ParseLevel(logLevelString)
             if err != nil {
-                logrusLogger.Warnf(cantSetLogLevel, defaultLogLevel)
+                logrusLogger.Warnf("Cannot set log level, will fall back to default level %s", defaultLogLevel)
                 logLevel = defaultLogLevel
             }
 
@@ -43,7 +38,7 @@ func GetInstance(logLevelString string) ILogger {
             instance.Logger = logrusLogger
         })
     } else {
-        instance.Trace(instanceAlreadyExists, logLevelString, logrus.Level(instance.GetLevel()))
+        instance.Trace("The instance already exists. Will ignore passed log level [%s]. Returning logger instance with logLevel [%s].", logLevelString, logrus.Level(instance.GetLevel()))
     }
 
     return instance
@@ -51,37 +46,37 @@ func GetInstance(logLevelString string) ILogger {
 
 func (l *logger) Info(message string, args ...interface{}) {
     if l.IsLevelEnabled(InfoLevel) {
-        l.createEntry().Infof(message, args...)
+        l.createEntry().Infof(message, parseArgs(args)...)
     }
 }
 
 func (l *logger) Trace(message string, args ...interface{}) {
     if l.IsLevelEnabled(TraceLevel) {
-        l.createEntry().Tracef(message, args...)
+        l.createEntry().Tracef(message, parseArgs(args...)...)
     }
 }
 
 func (l *logger) Debug(message string, args ...interface{}) {
     if l.IsLevelEnabled(DebugLevel) {
-        l.createEntry().Debugf(message, args...)
+        l.createEntry().Debugf(message, parseArgs(args...)...)
     }
 }
 
 func (l *logger) Warn(message string, args ...interface{}) {
     if l.IsLevelEnabled(WarnLevel) {
-        l.createEntry().Warnf(message, args...)
+        l.createEntry().Warnf(message, parseArgs(args...)...)
     }
 }
 
 func (l *logger) Error(message string, args ...interface{}) {
     if l.IsLevelEnabled(ErrorLevel) {
-        l.createEntry().Errorf(message, args...)
+        l.createEntry().Errorf(message, parseArgs(args...)...)
     }
 }
 
 func (l *logger) Fatal(message string, args ...interface{}) {
     if l.IsLevelEnabled(FatalLevel) {
-        l.createEntry().Fatalf(message, args...)
+        l.createEntry().Fatalf(message, parseArgs(args...)...)
     }
 }
 
@@ -95,7 +90,7 @@ func (l *logger) IsLevelEnabled(level Level) bool {
 
 // Generic helper function
 func (l *logger) createEntry() *logrus.Entry {
-    return logrus.NewEntry(l.Logger).WithFields(logrus.Fields{frame: getFrameInfo()})
+    return logrus.NewEntry(l.Logger).WithFields(logrus.Fields{"frame": getFrameInfo()})
 }
 
 // Function to retrieve information about the log-calling function
@@ -121,4 +116,91 @@ func getFrameInfo() string {
     message := fmt.Sprintf("%s, %s #%v", frame.Func.Name(), frame.File, frame.Line)
 
     return message
+}
+
+// parseArgs checks if the args have a value and replaces the value with nil (string)
+func parseArgs(args ...interface{}) []interface{} {
+    for key, value := range args {
+        reflectValue := reflect.ValueOf(value)
+
+        if isPointer(reflectValue) && reflectValue.IsNil() {
+            switch value.(type) {
+            case *int8, *uint8, *int16, *uint16, *int32, *uint32, *int64, *uint64, *int, *uint, *uintptr, *float32, *float64, *complex64, *complex128:
+                args[key] = 0
+            default:
+                args[key] = "nil"
+            }
+        }
+
+        args[key] = actualValue(args[key])
+
+    }
+
+    return args
+}
+
+// isPointer returns true if the interface is a pointer
+func isPointer(value reflect.Value) bool {
+    return value.Kind() == reflect.Ptr
+}
+
+// actualValue returns the actual value, no pointers
+func actualValue(value interface{}) interface{} {
+    if isPointer(reflect.ValueOf(value)) {
+        switch value.(type) {
+        case *string:
+            text := value.(*string)
+            return *text
+        case *int8:
+            number := value.(*int8)
+            return *number
+        case *uint8:
+            number := value.(*uint8)
+            return *number
+        case *int16:
+            number := value.(*int16)
+            return *number
+        case *uint16:
+            number := value.(*uint16)
+            return *number
+        case *int32:
+            number := value.(*int32)
+            return *number
+        case *uint32:
+            number := value.(*uint32)
+            return *number
+        case *int64:
+            number := value.(*int64)
+            return *number
+        case *uint64:
+            number := value.(*uint64)
+            return *number
+        case *int:
+            number := value.(*int)
+            return *number
+        case *uint:
+            number := value.(*uint)
+            return *number
+        case *uintptr:
+            number := value.(*uintptr)
+            return *number
+        case *float32:
+            number := value.(*float32)
+            return *number
+        case *float64:
+            number := value.(*float64)
+            return *number
+        case *complex64:
+            number := value.(*complex64)
+            return *number
+        case *complex128:
+            number := value.(*complex128)
+            return *number
+        case *bool:
+           boolean := value.(*bool)
+           return *boolean
+        }
+    }
+
+    return value
 }

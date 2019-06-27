@@ -21,6 +21,17 @@ func (suite *LoggerTestSuite) Test() {
     logger.Trace("test %s", "test")
     logger.Trace("test %s")
     logger.Trace("test %d", 1, "extra")
+    logger.Trace("test %d", nil)
+
+    var decimal *int
+    decimal = new(int)
+    *decimal = 12
+    var nul *string
+    var boolean *bool
+    boolean = new(bool)
+    *boolean = true
+
+    logger.Trace("test %d %s %s %t", decimal, nul, "testvar", boolean)
 
     logger.Debug("testMessage")
     logger.Debug("test %s", "test")
