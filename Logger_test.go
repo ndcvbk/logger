@@ -21,6 +21,9 @@ func (suite *LoggerTestSuite) Test() {
     logger.Trace("test %s", "test")
     logger.Trace("test %s")
     logger.Trace("test %d", 1, "extra")
+    logger.Trace("test %d", nil)
+    var nul *string = nil
+    logger.Trace("test %v %s %s", 1, nul, "str")
 
     logger.Debug("testMessage")
     logger.Debug("test %s", "test")
