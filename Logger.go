@@ -46,7 +46,7 @@ func GetInstance(logLevelString string) ILogger {
 
 func (l *logger) Info(message string, args ...interface{}) {
     if l.IsLevelEnabled(InfoLevel) {
-        l.createEntry().Infof(message, parseArgs(args)...)
+        l.createEntry().Infof(message, parseArgs(args...)...)
     }
 }
 
