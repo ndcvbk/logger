@@ -15,7 +15,7 @@ func TestSuiteForLogger(t *testing.T) {
 
 // This test doesn't assert anything at the moment, it's just a quick way to call these functions
 func (suite *LoggerTestSuite) Test() {
-    logger := GetInstance("trace")
+    logger := GetInstance("trace", false)
 
     logger.Trace("testMessage")
     logger.Trace("test %s", "test")
