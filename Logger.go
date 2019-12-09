@@ -1,7 +1,6 @@
 package logger
 
 import (
-	"fmt"
 	"github.com/sirupsen/logrus"
 	"os"
 	"reflect"
@@ -111,17 +110,21 @@ func (l *logger) IsLevelEnabled(level Level) bool {
 	return l.Logger.IsLevelEnabled(logrus.Level(level))
 }
 
-// Generic helper function
 func (l *logger) createEntry() *logrus.Entry {
-	return logrus.NewEntry(l.Logger).
-		WithFields(logrus.Fields{
-			"frame": getFrameInfo(),
-		})
+	return logrus.
+		NewEntry(l.Logger).
+		WithFields(logrus.Fields{"frame": getFrameInfo()})
+}
+
+type frameInfo struct {
+	Function string
+	File     string
+	Line     int
 }
 
 // Function to retrieve information about the log-calling function
-func getFrameInfo() string {
-	// We need the frame at index 3, since we never want runtime.Callers, getFrame, createEntry and Info|Debug|Trace|etc
+func getFrameInfo() frameInfo {
+	// target a the frame just outside the call stack of this logger
 	targetFrameIndex := 4
 
 	programCounters := make([]uintptr, targetFrameIndex+1)
@@ -139,7 +142,11 @@ func getFrameInfo() string {
 		}
 	}
 
-	return fmt.Sprintf("%s, %s #%v", frame.Func.Name(), frame.File, frame.Line)
+	return frameInfo{
+		Function: frame.Func.Name(),
+		File:     frame.File,
+		Line:     frame.Line,
+	}
 }
 
 // parseArgs checks if the args have a value and replaces the value with nil (string)
