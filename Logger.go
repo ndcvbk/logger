@@ -113,7 +113,10 @@ func (l *logger) IsLevelEnabled(level Level) bool {
 
 // Generic helper function
 func (l *logger) createEntry() *logrus.Entry {
-	return logrus.NewEntry(l.Logger).WithFields(logrus.Fields{"file": getFrameInfo()})
+	return logrus.NewEntry(l.Logger).
+		WithFields(logrus.Fields{
+			"frame": getFrameInfo(),
+		})
 }
 
 // Function to retrieve information about the log-calling function
@@ -136,9 +139,7 @@ func getFrameInfo() string {
 		}
 	}
 
-	message := fmt.Sprintf("%s(%s)#%v", frame.File, frame.Func.Name(), frame.Line)
-
-	return message
+	return fmt.Sprintf("%s, %s #%v", frame.Func.Name(), frame.File, frame.Line)
 }
 
 // parseArgs checks if the args have a value and replaces the value with nil (string)
