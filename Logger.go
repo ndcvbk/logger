@@ -117,9 +117,9 @@ func (l *logger) createEntry() *logrus.Entry {
 }
 
 type frameInfo struct {
-	function string
-	file     string
-	line     int
+	Function string `json:"function"`
+	File     string `json:"file"`
+	Line     int    `json:"line"`
 }
 
 // Function to retrieve information about the log-calling function
@@ -143,9 +143,9 @@ func getFrameInfo() frameInfo {
 	}
 
 	return frameInfo{
-		function: frame.Func.Name(),
-		file:     frame.File,
-		line:     frame.Line,
+		Function: frame.Func.Name(),
+		File:     frame.File,
+		Line:     frame.Line,
 	}
 }
 
