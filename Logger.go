@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"context"
 	"github.com/sirupsen/logrus"
 	"os"
 	"reflect"
@@ -42,62 +43,62 @@ func GetInstance(logLevelString string, jsonFormat bool) ILogger {
 			instance.Logger = logrusLogger
 		})
 	} else {
-		instance.Trace("The instance already exists. Will ignore passed log level [%s]. Returning logger instance with logLevel [%s].", logLevelString, logrus.Level(instance.GetLevel()))
+		instance.Trace(nil, "The instance already exists. Will ignore passed log level [%s]. Returning logger instance with logLevel [%s].", logLevelString, logrus.Level(instance.GetLevel()))
 	}
 
 	return instance
 }
 
-func (l *logger) Info(message string, args ...interface{}) {
+func (l *logger) Info(ctx context.Context, message string, args ...interface{}) {
 	if l.IsLevelEnabled(InfoLevel) {
 		lock.Lock()
 		l.SetOutput(os.Stdout)
-		l.createEntry().Infof(message, parseArgs(args...)...)
+		l.createEntry(ctx).Infof(message, parseArgs(args...)...)
 		lock.Unlock()
 	}
 }
 
-func (l *logger) Trace(message string, args ...interface{}) {
+func (l *logger) Trace(ctx context.Context, message string, args ...interface{}) {
 	if l.IsLevelEnabled(TraceLevel) {
 		lock.Lock()
 		l.SetOutput(os.Stdout)
-		l.createEntry().Tracef(message, parseArgs(args...)...)
+		l.createEntry(ctx).Tracef(message, parseArgs(args...)...)
 		lock.Unlock()
 	}
 }
 
-func (l *logger) Debug(message string, args ...interface{}) {
+func (l *logger) Debug(ctx context.Context, message string, args ...interface{}) {
 	if l.IsLevelEnabled(DebugLevel) {
 		lock.Lock()
 		l.SetOutput(os.Stdout)
-		l.createEntry().Debugf(message, parseArgs(args...)...)
+		l.createEntry(ctx).Debugf(message, parseArgs(args...)...)
 		lock.Unlock()
 	}
 }
 
-func (l *logger) Warn(message string, args ...interface{}) {
+func (l *logger) Warn(ctx context.Context, message string, args ...interface{}) {
 	if l.IsLevelEnabled(WarnLevel) {
 		lock.Lock()
 		l.SetOutput(os.Stdout)
-		l.createEntry().Warnf(message, parseArgs(args...)...)
+		l.createEntry(ctx).Warnf(message, parseArgs(args...)...)
 		lock.Unlock()
 	}
 }
 
-func (l *logger) Error(message string, args ...interface{}) {
+func (l *logger) Error(ctx context.Context, message string, args ...interface{}) {
 	if l.IsLevelEnabled(ErrorLevel) {
 		lock.Lock()
 		l.SetOutput(os.Stderr)
-		l.createEntry().Errorf(message, parseArgs(args...)...)
+		l.createEntry(ctx).Errorf(message, parseArgs(args...)...)
 		lock.Unlock()
 	}
 }
 
-func (l *logger) Fatal(message string, args ...interface{}) {
+func (l *logger) Fatal(ctx context.Context, message string, args ...interface{}) {
 	if l.IsLevelEnabled(FatalLevel) {
 		lock.Lock()
 		l.SetOutput(os.Stderr)
-		l.createEntry().Fatalf(message, parseArgs(args...)...)
+		l.createEntry(ctx).Fatalf(message, parseArgs(args...)...)
 		lock.Unlock()
 	}
 }
@@ -110,10 +111,13 @@ func (l *logger) IsLevelEnabled(level Level) bool {
 	return l.Logger.IsLevelEnabled(logrus.Level(level))
 }
 
-func (l *logger) createEntry() *logrus.Entry {
+func (l *logger) createEntry(ctx context.Context) *logrus.Entry {
 	return logrus.
 		NewEntry(l.Logger).
-		WithFields(logrus.Fields{"frame": getFrameInfo()})
+		WithFields(logrus.Fields{
+			"frame": getFrameInfo(),
+			"context": formatContextData(ctx),
+		})
 }
 
 type frameInfo struct {
@@ -147,6 +151,13 @@ func getFrameInfo() frameInfo {
 		File:     frame.File,
 		Line:     frame.Line,
 	}
+}
+
+func formatContextData(ctx context.Context) string{
+	if ctx != nil {
+		return ""
+	}
+	return ""
 }
 
 // parseArgs checks if the args have a value and replaces the value with nil (string)
