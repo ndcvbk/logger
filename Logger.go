@@ -3,6 +3,7 @@ package logger
 import (
 	"context"
 	"github.com/sirupsen/logrus"
+	"net/http"
 	"os"
 	"reflect"
 	"runtime"
@@ -115,7 +116,7 @@ func (l *logger) createEntry(ctx context.Context) *logrus.Entry {
 	return logrus.
 		NewEntry(l.Logger).
 		WithFields(logrus.Fields{
-			"frame": getFrameInfo(),
+			"frame":   getFrameInfo(),
 			"context": formatContextData(ctx),
 		})
 }
@@ -153,11 +154,15 @@ func getFrameInfo() frameInfo {
 	}
 }
 
-func formatContextData(ctx context.Context) string{
+func formatContextData(ctx context.Context) string {
 	if ctx != nil {
-		return ""
+		requestId, ok := ctx.Value(key).(string)
+		if !ok {
+			return "id not available"
+		}
+		return requestId
 	}
-	return ""
+	return "no context"
 }
 
 // parseArgs checks if the args have a value and replaces the value with nil (string)
@@ -245,4 +250,18 @@ func actualValue(value interface{}) interface{} {
 	}
 
 	return value
+}
+
+const requestId = "x-request-id"
+
+type keyType int
+
+const key keyType = 0
+
+func FromRequest(req *http.Request) string {
+	return req.Header.Get(requestId)
+}
+
+func NewContext(ctx context.Context, requestId string) context.Context {
+	return context.WithValue(ctx, key, requestId)
 }
