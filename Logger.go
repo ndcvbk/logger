@@ -3,7 +3,6 @@ package logger
 import (
 	"context"
 	"github.com/sirupsen/logrus"
-	"net/http"
 	"os"
 	"reflect"
 	"runtime"
@@ -44,7 +43,7 @@ func GetInstance(logLevelString string, jsonFormat bool) ILogger {
 			instance.Logger = logrusLogger
 		})
 	} else {
-		instance.Trace(nil, "The instance already exists. Will ignore passed log level [%s]. Returning logger instance with logLevel [%s].", logLevelString, logrus.Level(instance.GetLevel()))
+		instance.Warn(nil, "The instance already exists. Will ignore passed log level [%s]. Returning logger instance with logLevel [%s].", logLevelString, logrus.Level(instance.GetLevel()))
 	}
 
 	return instance
@@ -113,12 +112,15 @@ func (l *logger) IsLevelEnabled(level Level) bool {
 }
 
 func (l *logger) createEntry(ctx context.Context) *logrus.Entry {
-	return logrus.
+	entry := logrus.
 		NewEntry(l.Logger).
 		WithFields(logrus.Fields{
-			"frame":   getFrameInfo(),
-			"context": formatContextData(ctx),
+			"frame": getFrameInfo(),
 		})
+	if ctx != nil {
+		entry.WithField("context", getRequestId(ctx))
+	}
+	return entry
 }
 
 type frameInfo struct {
@@ -154,7 +156,7 @@ func getFrameInfo() frameInfo {
 	}
 }
 
-func formatContextData(ctx context.Context) string {
+func getRequestId(ctx context.Context) string {
 	if ctx != nil {
 		requestId, ok := ctx.Value(key).(string)
 		if !ok {
@@ -252,15 +254,11 @@ func actualValue(value interface{}) interface{} {
 	return value
 }
 
-const requestId = "x-request-id"
+const requestIdHeader = "x-request-id"
 
 type keyType int
 
 const key keyType = 0
-
-func FromRequest(req *http.Request) string {
-	return req.Header.Get(requestId)
-}
 
 func NewContext(ctx context.Context, requestId string) context.Context {
 	return context.WithValue(ctx, key, requestId)
