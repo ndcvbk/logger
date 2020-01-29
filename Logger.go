@@ -119,7 +119,7 @@ func (l *logger) createEntry(ctx context.Context) *logrus.Entry {
 			"frame": getFrameInfo(),
 		})
 	if ctx != nil {
-		entry.WithField("context", getRequestId(ctx))
+		entry = entry.WithField("requestId", getRequestId(ctx))
 	}
 	return entry
 }
