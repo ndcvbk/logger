@@ -3,6 +3,7 @@ package logger
 import (
 	"context"
 	"github.com/sirupsen/logrus"
+	"net/http"
 	"os"
 	"reflect"
 	"runtime"
@@ -157,14 +158,11 @@ func getFrameInfo() frameInfo {
 }
 
 func getRequestId(ctx context.Context) string {
-	if ctx != nil {
-		requestId, ok := ctx.Value(key).(string)
-		if !ok {
-			return "id not available"
-		}
-		return requestId
+	requestId, ok := ctx.Value(key).(string)
+	if !ok {
+		return "id not available"
 	}
-	return "no context"
+	return requestId
 }
 
 // parseArgs checks if the args have a value and replaces the value with nil (string)
@@ -259,6 +257,10 @@ const requestIdHeader = "x-request-id"
 type keyType int
 
 const key keyType = 0
+
+func GetIdFromRequest(req *http.Request) string {
+	return req.Header.Get(requestIdHeader)
+}
 
 func NewContext(ctx context.Context, requestId string) context.Context {
 	return context.WithValue(ctx, key, requestId)
