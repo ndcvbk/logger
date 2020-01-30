@@ -54,7 +54,10 @@ func (l *logger) Info(ctx context.Context, message string, args ...interface{}) 
 	if l.IsLevelEnabled(InfoLevel) {
 		lock.Lock()
 		l.SetOutput(os.Stdout)
-		l.createEntry(ctx).Infof(message, parseArgs(args...)...)
+		entry, ok := l.createEntry(ctx)
+		if ok {
+			entry.Infof(message, parseArgs(args...)...)
+		}
 		lock.Unlock()
 	}
 }
@@ -63,7 +66,10 @@ func (l *logger) Trace(ctx context.Context, message string, args ...interface{})
 	if l.IsLevelEnabled(TraceLevel) {
 		lock.Lock()
 		l.SetOutput(os.Stdout)
-		l.createEntry(ctx).Tracef(message, parseArgs(args...)...)
+		entry, ok := l.createEntry(ctx)
+		if ok {
+			entry.Tracef(message, parseArgs(args...)...)
+		}
 		lock.Unlock()
 	}
 }
@@ -72,7 +78,10 @@ func (l *logger) Debug(ctx context.Context, message string, args ...interface{})
 	if l.IsLevelEnabled(DebugLevel) {
 		lock.Lock()
 		l.SetOutput(os.Stdout)
-		l.createEntry(ctx).Debugf(message, parseArgs(args...)...)
+		entry, ok := l.createEntry(ctx)
+		if ok {
+			entry.Debugf(message, parseArgs(args...)...)
+		}
 		lock.Unlock()
 	}
 }
@@ -81,7 +90,10 @@ func (l *logger) Warn(ctx context.Context, message string, args ...interface{}) 
 	if l.IsLevelEnabled(WarnLevel) {
 		lock.Lock()
 		l.SetOutput(os.Stdout)
-		l.createEntry(ctx).Warnf(message, parseArgs(args...)...)
+		entry, ok := l.createEntry(ctx)
+		if ok {
+			entry.Warnf(message, parseArgs(args...)...)
+		}
 		lock.Unlock()
 	}
 }
@@ -90,7 +102,10 @@ func (l *logger) Error(ctx context.Context, message string, args ...interface{})
 	if l.IsLevelEnabled(ErrorLevel) {
 		lock.Lock()
 		l.SetOutput(os.Stderr)
-		l.createEntry(ctx).Errorf(message, parseArgs(args...)...)
+		entry, ok := l.createEntry(ctx)
+		if ok {
+			entry.Errorf(message, parseArgs(args...)...)
+		}
 		lock.Unlock()
 	}
 }
@@ -99,7 +114,10 @@ func (l *logger) Fatal(ctx context.Context, message string, args ...interface{})
 	if l.IsLevelEnabled(FatalLevel) {
 		lock.Lock()
 		l.SetOutput(os.Stderr)
-		l.createEntry(ctx).Fatalf(message, parseArgs(args...)...)
+		entry, ok := l.createEntry(ctx)
+		if ok {
+			entry.Fatalf(message, parseArgs(args...)...)
+		}
 		lock.Unlock()
 	}
 }
@@ -112,16 +130,20 @@ func (l *logger) IsLevelEnabled(level Level) bool {
 	return l.Logger.IsLevelEnabled(logrus.Level(level))
 }
 
-func (l *logger) createEntry(ctx context.Context) *logrus.Entry {
+func (l *logger) createEntry(ctx context.Context) (*logrus.Entry, bool) {
 	entry := logrus.
 		NewEntry(l.Logger).
 		WithFields(logrus.Fields{
 			"frame": getFrameInfo(),
 		})
 	if ctx != nil {
-		entry = entry.WithField("requestId", getRequestId(ctx))
+		requestId, ok := ctx.Value(key).(string)
+		if !ok {
+			return nil, false
+		}
+		entry = entry.WithField("requestId", requestId)
 	}
-	return entry
+	return entry, true
 }
 
 type frameInfo struct {
@@ -155,14 +177,6 @@ func getFrameInfo() frameInfo {
 		File:     frame.File,
 		Line:     frame.Line,
 	}
-}
-
-func getRequestId(ctx context.Context) string {
-	requestId, ok := ctx.Value(key).(string)
-	if !ok {
-		return "id not available"
-	}
-	return requestId
 }
 
 // parseArgs checks if the args have a value and replaces the value with nil (string)
