@@ -1,6 +1,7 @@
 package logger
 
 import (
+    "context"
     "github.com/sirupsen/logrus"
 )
 
@@ -17,22 +18,22 @@ const (
 
 type ILogger interface {
     // Log with loglevel trace
-    Trace(message string, args ...interface{})
+    Trace(ctx context.Context, message string, args ...interface{})
 
     // Log with loglevel debug
-    Debug(message string, args ...interface{})
+    Debug(ctx context.Context, message string, args ...interface{})
 
     // Log with loglevel info
-    Info(message string, args ...interface{})
+    Info(ctx context.Context, message string, args ...interface{})
     
     // Log with loglevel warn
-    Warn(message string, args ...interface{})
+    Warn(ctx context.Context, message string, args ...interface{})
     
     // Log with loglevel error
-    Error(message string, args ...interface{})
+    Error(ctx context.Context, message string, args ...interface{})
     
     // Log with loglevel fatal
-    Fatal(message string, args ...interface{})
+    Fatal(ctx context.Context, message string, args ...interface{})
 
     GetLevel() Level
 

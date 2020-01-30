@@ -1,7 +1,9 @@
 package logger
 
 import (
+	"context"
 	"github.com/sirupsen/logrus"
+	"net/http"
 	"os"
 	"reflect"
 	"runtime"
@@ -42,62 +44,80 @@ func GetInstance(logLevelString string, jsonFormat bool) ILogger {
 			instance.Logger = logrusLogger
 		})
 	} else {
-		instance.Trace("The instance already exists. Will ignore passed log level [%s]. Returning logger instance with logLevel [%s].", logLevelString, logrus.Level(instance.GetLevel()))
+		instance.Warn(nil, "The instance already exists. Will ignore passed log level [%s]. Returning logger instance with logLevel [%s].", logLevelString, logrus.Level(instance.GetLevel()))
 	}
 
 	return instance
 }
 
-func (l *logger) Info(message string, args ...interface{}) {
+func (l *logger) Info(ctx context.Context, message string, args ...interface{}) {
 	if l.IsLevelEnabled(InfoLevel) {
 		lock.Lock()
 		l.SetOutput(os.Stdout)
-		l.createEntry().Infof(message, parseArgs(args...)...)
+		entry, ok := l.createEntry(ctx)
+		if ok {
+			entry.Infof(message, parseArgs(args...)...)
+		}
 		lock.Unlock()
 	}
 }
 
-func (l *logger) Trace(message string, args ...interface{}) {
+func (l *logger) Trace(ctx context.Context, message string, args ...interface{}) {
 	if l.IsLevelEnabled(TraceLevel) {
 		lock.Lock()
 		l.SetOutput(os.Stdout)
-		l.createEntry().Tracef(message, parseArgs(args...)...)
+		entry, ok := l.createEntry(ctx)
+		if ok {
+			entry.Tracef(message, parseArgs(args...)...)
+		}
 		lock.Unlock()
 	}
 }
 
-func (l *logger) Debug(message string, args ...interface{}) {
+func (l *logger) Debug(ctx context.Context, message string, args ...interface{}) {
 	if l.IsLevelEnabled(DebugLevel) {
 		lock.Lock()
 		l.SetOutput(os.Stdout)
-		l.createEntry().Debugf(message, parseArgs(args...)...)
+		entry, ok := l.createEntry(ctx)
+		if ok {
+			entry.Debugf(message, parseArgs(args...)...)
+		}
 		lock.Unlock()
 	}
 }
 
-func (l *logger) Warn(message string, args ...interface{}) {
+func (l *logger) Warn(ctx context.Context, message string, args ...interface{}) {
 	if l.IsLevelEnabled(WarnLevel) {
 		lock.Lock()
 		l.SetOutput(os.Stdout)
-		l.createEntry().Warnf(message, parseArgs(args...)...)
+		entry, ok := l.createEntry(ctx)
+		if ok {
+			entry.Warnf(message, parseArgs(args...)...)
+		}
 		lock.Unlock()
 	}
 }
 
-func (l *logger) Error(message string, args ...interface{}) {
+func (l *logger) Error(ctx context.Context, message string, args ...interface{}) {
 	if l.IsLevelEnabled(ErrorLevel) {
 		lock.Lock()
 		l.SetOutput(os.Stderr)
-		l.createEntry().Errorf(message, parseArgs(args...)...)
+		entry, ok := l.createEntry(ctx)
+		if ok {
+			entry.Errorf(message, parseArgs(args...)...)
+		}
 		lock.Unlock()
 	}
 }
 
-func (l *logger) Fatal(message string, args ...interface{}) {
+func (l *logger) Fatal(ctx context.Context, message string, args ...interface{}) {
 	if l.IsLevelEnabled(FatalLevel) {
 		lock.Lock()
 		l.SetOutput(os.Stderr)
-		l.createEntry().Fatalf(message, parseArgs(args...)...)
+		entry, ok := l.createEntry(ctx)
+		if ok {
+			entry.Fatalf(message, parseArgs(args...)...)
+		}
 		lock.Unlock()
 	}
 }
@@ -110,10 +130,20 @@ func (l *logger) IsLevelEnabled(level Level) bool {
 	return l.Logger.IsLevelEnabled(logrus.Level(level))
 }
 
-func (l *logger) createEntry() *logrus.Entry {
-	return logrus.
+func (l *logger) createEntry(ctx context.Context) (*logrus.Entry, bool) {
+	entry := logrus.
 		NewEntry(l.Logger).
-		WithFields(logrus.Fields{"frame": getFrameInfo()})
+		WithFields(logrus.Fields{
+			"frame": getFrameInfo(),
+		})
+	if ctx != nil {
+		requestId, ok := ctx.Value(key).(string)
+		if !ok {
+			return nil, false
+		}
+		entry = entry.WithField("requestId", requestId)
+	}
+	return entry, true
 }
 
 type frameInfo struct {
@@ -234,4 +264,18 @@ func actualValue(value interface{}) interface{} {
 	}
 
 	return value
+}
+
+const requestIdHeader = "x-request-id"
+
+type keyType int
+
+const key keyType = 0
+
+func GetIdFromRequest(req *http.Request) string {
+	return req.Header.Get(requestIdHeader)
+}
+
+func NewContext(ctx context.Context, requestId string) context.Context {
+	return context.WithValue(ctx, key, requestId)
 }
