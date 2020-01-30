@@ -1,4 +1,4 @@
-module github.com/ndcvbk/logger
+module github.com/ndcvbk/logger/v2
 
 require (
 	github.com/logmatic/logmatic-go v0.0.0-20170901131029-9eb00af17b4c
